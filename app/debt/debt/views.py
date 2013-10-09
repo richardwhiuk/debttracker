@@ -44,6 +44,27 @@ def entries(request, instance_id):
   context = {'entries': entries, 'instance': instance }
   return render(request, 'debt/entries.html', context)
 
+def delete_state(request, instance_id, state_id):
+  instance = Instance.objects.get(id=instance_id)
+  latest = instance.latest_state()
+
+  try:
+    if latest.id == int(state_id):
+      for person in latest.people.all():
+        if len(person.state_set.all()) == 1:
+          person.delete()
+      for debt in latest.debts.all():
+        if len(debt.state_set.all()) == 1:
+          for subdebt in debt.subdebt_set.all():
+            subdebt.delete()
+          debt.delete()
+      latest.delete()
+  except Exception as e:
+    print e
+    return HttpResponseRedirect(reverse('changes', args=(instance.id,)))
+  else:
+    return HttpResponseRedirect(reverse('changes', args=(instance.id,)))
+
 def add_person(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
   latest = instance.latest_state()

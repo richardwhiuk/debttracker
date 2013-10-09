@@ -8,7 +8,7 @@
   <thead>
     <tr>
       <th>Date</th>
-      <th>Description</th>
+      <th colspan="2">Description</th>
     </tr>
   </thead>
   <tbody>
@@ -16,6 +16,11 @@
     <tr>
       <td>{{ entry.date | date:'d/m/Y' }}</td>
       <td>{{ entry.reason }}</td>
+      <td>
+{% if forloop.last %}
+        <a href="{% url 'delete_state' instance.id entry.id %}" class="btn btn-danger">Delete</a>
+{% endif %}
+      </td>
     </tr>
 {% endfor %}
   </tbody>

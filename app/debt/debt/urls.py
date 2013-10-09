@@ -14,7 +14,7 @@ urlpatterns = patterns('',
     url(r'^(?P<instance_id>\d+)/add/$', 'debt.views.add_entry', name='add_entry'),
     url(r'^(?P<instance_id>\d+)/add/advanced/$', 'debt.views.add_entry_advanced', name='add_entry_advanced'),
     url(r'^(?P<instance_id>\d+)/add/person/$', 'debt.views.add_person', name='add_person'),
-    # url(r'^debt/', include('debt.foo.urls')),
+    url(r'^(?P<instance_id>\d+)/delete/state/(?P<state_id>\d+)/$', 'debt.views.delete_state', name='delete_state'),
 
     # Uncomment the admin/doc line below to enable admin documentation:
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
