@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Entries{% endblock %}
+{% block header %}Entries{% endblock %}
+
+{% block content %}
+<table class="table table-hover table-condensed">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>What?</th>
+      <th>Total cost?</th>
+      <th>Who paid?</th>
+      <th>Who owes?</th>
+    </tr>
+  </thead>
+  <tbody>
+{% for entry in entries %}
+    <tr>
+      <td>{{ entry.date | date:'d/m/Y' }}</td>
+      <td>{{ entry.what }}</td>
+      <td>£{{ entry.cost_gbp }}</td>
+      <td>{{ entry.debtee.name }}</td>
+      <td>
+{% for debtor in entry.debtors %}
+          {{ debtor }}{% if not forloop.last %},{% endif %}
+{% endfor %}
+      </td>
+    </tr>
+{% endfor %}
+  </tbody>
+</table>
+{% endblock %}
+

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Entry{% endblock %}
+{% block header %}Add New Entry{% endblock %}
+
+{% block content %}
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<form action="{% url 'add' instance.id '' %}" method="post" class="form-horizontal">
+{% csrf_token %}
+<div class="form-group">
+  <label for="debtee" class="col-lg-2 control-label">Person who paid</label>
+  <div class="col-lg-10">
+  <select class="form-control" name="debtee" id="debtee">
+{% for person in people %}
+    <option value="{{ person.id }}" />{{ person.name }}</option>
+{% endfor %}
+  </select>
+  </div>
+</div>
+<div class="form-group">
+  <label for="reason" class="col-lg-2 control-label">For: (e.g. Pizza)</label>
+  <div class="col-lg-10">
+  <input type="textbox" class="form-control" name="reason" id="reason" value="">
+  </div>
+</div>
+<div class="form-group">
+  <label for="total_cost" class="col-lg-2 control-label">Cost (£)</label>
+  <div class="col-lg-10">
+  <input type="textbox" class="form-control" name="total_cost" id="total_cost" value="0.00">
+  </div>
+</div>
+  <h3>People who owe money</h3>
+<div class="form-group">
+{% for person in people %}
+    <label class="col-lg-2 control-label" for="debtor{{ person.id }}">
+      {{ person.name }}
+      <input type="checkbox" class="" name="debtor" id="debtor{{ person.id }}" value="{{ person.id }}" />
+    </label>
+{% endfor %}
+</div><div class="form-group">
+<input type="submit" class="btn btn-default" value="Add Entry" />
+</div>
+</form>
+{% endblock %}
+
