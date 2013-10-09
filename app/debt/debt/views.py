@@ -3,6 +3,39 @@ from debt.models import Debt, Person, Instance
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 
+class DotExpandedDict(dict):
+    """
+    A special dictionary constructor that takes a dictionary in which the keys
+    may contain dots to specify inner dictionaries. It's confusing, but this
+    example should make sense.
+
+    >>> d = DotExpandedDict({'person.1.firstname': ['Simon'], \
+            'person.1.lastname': ['Willison'], \
+            'person.2.firstname': ['Adrian'], \
+            'person.2.lastname': ['Holovaty']})
+    >>> d
+    {'person': {'1': {'lastname': ['Willison'], 'firstname': ['Simon']}, '2': {'lastname': ['Holovaty'], 'firstname': ['Adrian']}}}
+    >>> d['person']
+    {'1': {'lastname': ['Willison'], 'firstname': ['Simon']}, '2': {'lastname': ['Holovaty'], 'firstname': ['Adrian']}}
+    >>> d['person']['1']
+    {'lastname': ['Willison'], 'firstname': ['Simon']}
+
+    # Gotcha: Results are unpredictable if the dots are "uneven":
+    >>> DotExpandedDict({'c.1': 2, 'c.2': 3, 'c': 1})
+    {'c': 1}
+    """
+    def __init__(self, key_to_list_mapping):
+        for k, v in key_to_list_mapping.items():
+            current = self
+            bits = k.split('.')
+            for bit in bits[:-1]:
+                current = current.setdefault(bit, {})
+            # Now assign value to current position
+            try:
+                current[bits[-1]] = v
+            except TypeError: # Special-case if current isn't a dict.
+                current = {bits[-1]: v}
+
 # Emulates the spreadsheet's entries view
 def entries(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
@@ -11,7 +44,7 @@ def entries(request, instance_id):
   context = {'entries': entries, 'instance': instance }
   return render(request, 'debt/entries.html', context)
 
-def add(request, instance_id, mode):
+def add_entry(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
   latest = instance.latest_state()
 
@@ -34,10 +67,34 @@ def add(request, instance_id, mode):
   except (KeyError, Person.DoesNotExist):
     people = instance.latest_state().people.order_by('name')
     context = {'instance': instance, 'people': people}
-    if mode == 'advanced':
-      return render(request, 'debt/add_advanced.html', context)
-    else:
-      return render(request, 'debt/add.html', context)
+    return render(request, 'debt/add.html', context)
+  else:
+    return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
+
+def add_entry_advanced(request, instance_id):
+  instance = Instance.objects.get(id=instance_id)
+  latest = instance.latest_state()
+
+  try:
+    debtee = latest.people.get(id=request.POST['debtee'])
+    debtors = DotExpandedDict(request.POST)['debtor']
+
+    reason = request.POST['reason'].strip()
+
+    nstate = latest.clone("Adding new debt for: " + str(reason))
+
+    debt = nstate.debts.create(what=reason,debtee=debtee)
+
+    for debtor in debtors:
+      if int(debtors[debtor]) > 0:
+        dperson = latest.people.get(id=debtor)
+        cost =  int(float(debtors[debtor]) * 100.0)
+        debt.subdebt_set.create(cost=cost,debtor=dperson)
+
+  except (KeyError, Person.DoesNotExist):
+    people = instance.latest_state().people.order_by('name')
+    context = {'instance': instance, 'people': people}
+    return render(request, 'debt/add_advanced.html', context)
   else:
     return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
 

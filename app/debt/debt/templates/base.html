@@ -29,7 +29,14 @@
         </div>
         <div class="collapse navbar-collapse">
           <ul class="nav navbar-nav">
-            <li><a href="{% url 'add' instance.id '' %}">Add</a></li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Add <b class="caret"></b></a>
+              <ul class="dropdown-menu">
+                <li><a href="{% url 'add_entry' instance.id %}">Simple Entry</a></li>
+                <li><a href="{% url 'add_entry_advanced' instance.id %}">Advaced Entry</a></li>
+                <li><a href="{% url 'add_person' instance.id %}">Person</a></li>
+              </ul>
+            </li>
             <li><a href="{% url 'summary' instance.id %}">Summary</a></li>
             <li><a href="{% url 'detailed' instance.id %}">Detailed</a></li>
             <li><a href="{% url 'entries' instance.id %}">Entries</a></li>
