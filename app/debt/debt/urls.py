@@ -13,6 +13,7 @@ urlpatterns = patterns('',
     url(r'^(?P<instance_id>\d+)/entries/$', 'debt.views.entries', name='entries'),
     url(r'^(?P<instance_id>\d+)/add/$', 'debt.views.add_entry', name='add_entry'),
     url(r'^(?P<instance_id>\d+)/add/advanced/$', 'debt.views.add_entry_advanced', name='add_entry_advanced'),
+    url(r'^(?P<instance_id>\d+)/add/person/$', 'debt.views.add_person', name='add_person'),
     # url(r'^debt/', include('debt.foo.urls')),
 
     # Uncomment the admin/doc line below to enable admin documentation:

@@ -44,6 +44,26 @@ def entries(request, instance_id):
   context = {'entries': entries, 'instance': instance }
   return render(request, 'debt/entries.html', context)
 
+def add_person(request, instance_id):
+  instance = Instance.objects.get(id=instance_id)
+  latest = instance.latest_state()
+
+  try:
+    try:
+      plusone = latest.people.get(id=int(request.POST['plusone']))
+    except Person.DoesNotExist:
+      plusone = None
+    name = request.POST['name'].strip()
+    nstate = latest.clone("Adding new person: " + str(name))
+    person = nstate.people.create(name=name,plusone=plusone)
+
+  except (KeyError, Person.DoesNotExist):
+    people = instance.latest_state().people.order_by('name')
+    context = {'instance': instance, 'people': people}
+    return render(request, 'debt/add_person.html', context)
+  else:
+    return HttpResponseRedirect(reverse('detailed', args=(instance.id,)))
+
 def add_entry(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
   latest = instance.latest_state()

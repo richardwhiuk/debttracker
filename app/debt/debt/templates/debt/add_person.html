@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Person{% endblock %}
+{% block header %}Add New Person{% endblock %}
+
+{% block content %}
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<form action="{% url 'add_person' instance.id %}" method="post" class="form-horizontal">
+{% csrf_token %}
+<div class="form-group">
+  <label for="name" class="col-lg-2 control-label">Name:</label>
+  <div class="col-lg-10">
+  <input class="form-control" name="name" id="name" />
+  </div>
+</div>
+<div class="form-group">
+  <label for="plusone" class="col-lg-2 control-label">Parent</label>
+  <div class="col-lg-10">
+  <select class="form-control" name="plusone" id="plusone">
+    <option value="0" />-- None --</option>
+{% for person in people %}
+    <option value="{{ person.id }}" />{{ person.name }}</option>
+{% endfor %}
+  </select>
+  </div>
+</div>
+<div class="form-group">
+<input type="submit" class="btn btn-default" value="Add Entry" />
+</div>
+</form>
+{% endblock %}
+
