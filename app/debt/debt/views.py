@@ -94,7 +94,7 @@ def add_entry(request, instance_id):
     debtee = latest.people.get(id=request.POST['debtee'])
     debtors_u = request.POST.getlist('debtor')
     reason = request.POST['reason'].strip()
-    debtors = latest.people.filter(id__in=debtors_u)
+    debtors = latest.people.filter(id__in=debtors_u).filter(retired=False)
     cost =  int( (float(request.POST['total_cost']) * 100.0 ) / len(debtors))
     if len(debtors) != len(debtors_u):
       raise Person.DoesNotExist(str(debtors_u) + ' - ' + str(debtors))
@@ -107,7 +107,7 @@ def add_entry(request, instance_id):
       debt.subdebt_set.create(cost=cost,debtor=debtor)
 
   except (KeyError, Person.DoesNotExist):
-    people = instance.latest_state().people.order_by('name')
+    people = latest.people.filter(retired=False).order_by('name')
     context = {'instance': instance, 'people': people}
     return render(request, 'debt/add.html', context)
   else:
@@ -134,7 +134,7 @@ def add_entry_advanced(request, instance_id):
         debt.subdebt_set.create(cost=cost,debtor=dperson)
 
   except (KeyError, Person.DoesNotExist):
-    people = instance.latest_state().people.order_by('name')
+    people = latest.people.filter(retired=False).order_by('name')
     context = {'instance': instance, 'people': people}
     return render(request, 'debt/add_advanced.html', context)
   else:
@@ -233,12 +233,8 @@ def detail_sort(x,y):
 def balances(request, instance_id, mode):
   cache = {}
 
+  people = {}
   data = {}
-
-  if mode == 'summary':
-    people = {}
-  else:
-    people = data
 
   instance = Instance.objects.get(id=instance_id)
 
@@ -248,13 +244,13 @@ def balances(request, instance_id, mode):
 
   for person in state.people.all():
     summary = Summary(person.id,person.name,person.plusone_id)
-    if person.plusone == None:
+    if (not person.retired) and (person.plusone == None or mode != 'summary'):
       data[person.id] = summary
     people[person.id] = summary
 
   for person in people:
     if people[person].plusone and people[person].plusone in data:
-      data[people[person].plusone].add_sub(people[person])
+      people[people[person].plusone].add_sub(people[person])
       people[person].add_parent(data[people[person].plusone])
 
   max_depth = 0
