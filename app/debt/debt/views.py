@@ -2,6 +2,7 @@ from django.shortcuts import render
 from debt.models import Debt, Person, Instance
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
+from functools import cmp_to_key
 
 class DotExpandedDict(dict):
     """
@@ -83,7 +84,7 @@ def add_person(request, instance_id):
     context = {'instance': instance, 'people': people}
     return render(request, 'debt/add_person.html', context)
   else:
-    return HttpResponseRedirect(reverse('detailed', args=(instance.id,)))
+    return HttpResponseRedirect(reverse('individual', args=(instance.id,)))
 
 def add_entry(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
@@ -146,24 +147,53 @@ def changes(request, instance_id):
   return render(request, 'debt/states.html', context)
 
 class Summary:
-  def __init__(self, name):
+  def __init__(self, id, name, plusone):
+    self._depth = None
+    self.id = id
     self.name = name
     self.owes = 0
     self.paid = 0
+    self.parent = None
+    self.plusone = plusone
+    self.subs = []
+  def has_sub(self, sub):
+    for s in self.subs:
+      if s.id == sub.id or s.has_sub(sub):
+        return True
+    return False
+  def add_sub(self, sub):
+    self.subs.append(sub)
+  def add_parent(self, parent):
+    self.parent = parent
   def name(self):
     return self.name
   def paid_gbp(self):
     return "%.2f" % (self.paid / 100.0) 
   def owes_gbp(self):
     return "%.2f" % (self.owes / 100.0) 
-  def add_debt(self, amount):
+  def add_debt(self, amount, mode):
     self.owes += amount
-  def add_asset(self, amount):
+    if mode != 'individual' and self.parent:
+      self.parent.add_debt(amount, mode)
+  def add_asset(self, amount, mode):
     self.paid += amount
+    if mode != 'individual' and self.parent:
+      self.parent.add_asset(amount, mode)
   def balance(self):
     return self.paid - self.owes
   def balance_gbp(self):
     return "%.2f" % (self.balance() / 100.0) 
+  def depth(self):
+    if self._depth:
+      return self._depth
+    if self.parent:
+      self._depth = self.parent.depth() + 1
+    else:
+      self._depth = 0
+    return self._depth
+  def indent(self):
+    return range(self.depth())
+  
 
 def find_top_plusone(f, people, cache):
   found = []
@@ -177,44 +207,38 @@ def find_top_plusone(f, people, cache):
   return k
 
 def summary(request, instance_id):
+  return balances(request, instance_id, 'summary')
 
-  cache = {}
-  data = {}
-  people = {}
-
-  instance = Instance.objects.get(id=instance_id)
-
-  state = instance.latest_state()
-
-  # Add all the people
-
-  for person in state.people.filter(plusone_id=None):
-    data[person.id] = Summary(person.name)
-
-  for person in state.people.all():
-    people[person.id] = person.plusone_id
-
-  print data
-
-  # Add all the debts
-
-  for debt in state.debts.all():
-    total = 0
-    for subdebt in debt.subdebt_set.all():
-       data[find_top_plusone(subdebt.debtor.id, people, cache)].add_debt(subdebt.cost)
-       total += subdebt.cost
-    data[find_top_plusone(debt.debtee.id, people, cache)].add_asset(total)
-
-  sort = sorted(data.values(), key=lambda summary: summary.balance())
-
-  context = {'data': sort, 'instance': instance, 'title': 'Summary' }
-
-  return render(request, 'debt/summary.html', context)
-
-# Emulates the spreadsheet's summary view
 def detailed(request, instance_id):
+  return balances(request, instance_id, 'detailed')
+
+def individual(request, instance_id):
+  return balances(request, instance_id, 'individual')
+
+def detail_sort(x,y):
+  if x.id == y.id:
+    return 0
+  if x.has_sub(y):
+    return -1
+  if y.has_sub(x):
+    return 1
+  if x.parent and y.parent and x.parent.id != y.parent.id:
+    return detail_sort(x.parent, y)
+  elif x.parent:
+    return detail_sort(x.parent, y)
+  elif y.parent:
+    return detail_sort(x, y.parent)
+  return x.balance() - y.balance()
+
+def balances(request, instance_id, mode):
+  cache = {}
 
   data = {}
+
+  if mode == 'summary':
+    people = {}
+  else:
+    people = data
 
   instance = Instance.objects.get(id=instance_id)
 
@@ -223,20 +247,43 @@ def detailed(request, instance_id):
   # Add all the people
 
   for person in state.people.all():
-    data[person.id] = Summary(person.name)
+    summary = Summary(person.id,person.name,person.plusone_id)
+    if person.plusone == None:
+      data[person.id] = summary
+    people[person.id] = summary
+
+  for person in people:
+    if people[person].plusone and people[person].plusone in data:
+      data[people[person].plusone].add_sub(people[person])
+      people[person].add_parent(data[people[person].plusone])
+
+  max_depth = 0
+
+  for person in people:
+    i = people[person].depth()
+    if i > max_depth:
+      max_depth = i
 
   # Add all the debts
 
   for debt in state.debts.all():
     total = 0
     for subdebt in debt.subdebt_set.all():
-       data[subdebt.debtor.id].add_debt(subdebt.cost)
+       people[subdebt.debtor.id].add_debt(subdebt.cost, mode)
        total += subdebt.cost
-    data[debt.debtee.id].add_asset(total)
+    people[debt.debtee.id].add_asset(total, mode)
 
-  sort = sorted(data.values(), key=lambda summary: summary.balance())
+  if mode == 'detailed':
+    sort = sorted(data.values(), key=cmp_to_key(detail_sort))
+  else:
+    sort = sorted(data.values(), key=lambda summary: summary.balance())
 
-  context = {'data': sort, 'instance': instance, 'title': 'Detailed' }
+  context = {'data': sort, 'instance': instance, 'title': mode.title(), 'mode': mode, 'max_indent': max_depth}
+
+  template = 'debt/summary.html'
+
+  if mode == 'detailed':
+    template = 'debt/detailed.html'
 
   return render(request, 'debt/summary.html', context)
 

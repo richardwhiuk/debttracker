@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% load debt_extras %}
+
 {% block title %}{{ title }}{% endblock %}
 {% block header %}{{ title }}{% endblock %}
 
@@ -7,7 +9,11 @@
 <table class="table table-hover table-condensed">
   <thead>
     <tr>
-      <th>Person</th>
+      <th 
+{% if mode == "detailed" %}
+colspan="{{ max_indent|add:"1" }}"
+{% endif %}
+>Person</th>
       <th>Paid</th>
       <th>Owes</th>
       <th>Balance</th>
@@ -22,7 +28,16 @@ class="danger"
 class="success"
 {% endif %}{% endif %}
 >
-      <td>{{ entry.name }}</td>
+{% if mode == "detailed" %}
+{% for i in entry.indent %}
+      <td></td>
+{% endfor %}
+{% endif %}
+      <td 
+{% if mode == "detailed" %}
+colspan="{{ max_indent|subtract:entry.depth|add:"1" }}"
+{% endif %}
+>{{ entry.name }}</td>
       <td>£{{ entry.paid_gbp }}</td>
       <td>£{{ entry.owes_gbp }}</td>
       <td>£{{ entry.balance_gbp }}</td>

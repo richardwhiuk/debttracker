@@ -28,6 +28,9 @@ class Person(models.Model):
   # Plus one of this person
   plusone = models.ForeignKey('self', blank=True, null=True)
 
+  # Are they retired?
+  retired = models.BooleanField(default=False)
+
   def __unicode__(self):
     return self.name
 
