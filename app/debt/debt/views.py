@@ -216,19 +216,51 @@ def individual(request, instance_id):
   return balances(request, instance_id, 'individual')
 
 def detail_sort(x,y):
+  ret = None
   if x.id == y.id:
-    return 0
-  if x.has_sub(y):
-    return -1
-  if y.has_sub(x):
-    return 1
-  if x.parent and y.parent and x.parent.id != y.parent.id:
-    return detail_sort(x.parent, y)
+    ret = 0
+    reason = 'eqid'
+  elif x.has_sub(y):
+    reason = 'hsx'
+    ret = -1
+  elif y.has_sub(x):
+    reason = 'hsy'
+    ret = 1
   elif x.parent:
-    return detail_sort(x.parent, y)
-  elif y.parent:
-    return detail_sort(x, y.parent)
-  return x.balance() - y.balance()
+   if y.parent:
+     if x.parent.id == y.parent.id:
+       ret = x.balance() - y.balance()
+       reason = 'eqp'
+     else:
+       # Find common ancestor
+       xa = {}
+       a = x
+       while a.parent:
+         xa[a.parent.id] = a
+         a = a.parent
+
+       b = y
+       while not ret and b.parent:
+         if b.parent.id in xa:
+           ret = detail_sort(xa[b.parent.id], b)
+           reason = 'dpf'
+         b = b.parent
+
+       if not ret:
+         ret = detail_sort(a, b)
+         reason = 'dpnf'
+   else:
+     ret = detail_sort(x.parent, y)
+     reason = 'xp'
+  else:
+    if y.parent:
+      ret = detail_sort(x, y.parent)
+      reason = 'yp'
+    else:
+      ret = x.balance() - y.balance()
+      reason = 'nop'
+  # print 'DS: ' + x.name + ' with: ' + y.name + ' => ' + reason + ' ' + str(ret)
+  return ret
 
 def balances(request, instance_id, mode):
   cache = {}
