@@ -248,9 +248,9 @@ class Summary:
   def name(self):
     return self.name
   def paid_gbp(self):
-    return "%.2f" % (self.paid / 100.0) 
+    return "%.2f" % (self.paid / 100.0)
   def owes_gbp(self):
-    return "%.2f" % (self.owes / 100.0) 
+    return "%.2f" % (self.owes / 100.0)
   def add_debt(self, amount, mode):
     self.owes += amount
     if mode != 'individual' and self.parent:
@@ -262,7 +262,7 @@ class Summary:
   def balance(self):
     return self.paid - self.owes
   def balance_gbp(self):
-    return "%.2f" % (self.balance() / 100.0) 
+    return "%.2f" % (self.balance() / 100.0)
   def depth(self):
     if self._depth:
       return self._depth
@@ -273,7 +273,7 @@ class Summary:
     return self._depth
   def indent(self):
     return range(self.depth())
-  
+
 
 def find_top_plusone(f, people, cache):
   found = []
