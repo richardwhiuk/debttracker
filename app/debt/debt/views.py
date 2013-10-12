@@ -136,10 +136,16 @@ def edit_entry(request, instance_id, debt_id):
       # Include retired people, as they may hold existing debt
       people = latest.people.order_by('name')
       debtors = {}
-      cost = 0
+      total_cost = 0
+      cost = None
       for subdebt in debt.subdebt_set.all():
         debtors[subdebt.debtor_id] = True
-        cost += subdebt.cost
+        if subdebt.cost > 0:
+          total_cost += subdebt.cost
+          if not cost:
+            cost = subdebt.cost
+          elif cost != subdebt.cost:
+            return HttpResponseRedirect(reverse('edit_entry_advanced', args=(instance.id,debt_id,)))
 
       pdebtors = []
       for person in people:
@@ -155,7 +161,7 @@ def edit_entry(request, instance_id, debt_id):
         'date': debt.date.strftime("%d/%m/%Y %H:%M:%S %Z"),
         'reason': debt.what,
         'people': pdebtors,
-        'cost': cost / 100.0
+        'cost': total_cost / 100.0
       }
 
       return render(request, 'debt/edit.html', context)
