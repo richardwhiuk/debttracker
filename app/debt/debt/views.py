@@ -150,7 +150,7 @@ def edit_entry(request, instance_id, debt_id):
       pdebtors = []
       for person in people:
         debtor = (person.id in debtors)
-        debtee = (person.id == debt.debtee)
+        debtee = (person.id == debt.debtee_id)
         pdebtors.append({ 'id': person.id, 'debtor': debtor, 'debtee': debtee, 'name': person.name})
 
       print repr(debt.date)
