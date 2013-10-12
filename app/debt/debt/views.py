@@ -67,7 +67,6 @@ def delete_state(request, instance_id, state_id):
           debt.delete()
       latest.delete()
   except Exception as e:
-    print e
     return HttpResponseRedirect(reverse('changes', args=(instance.id,)))
   else:
     return HttpResponseRedirect(reverse('changes', args=(instance.id,)))
@@ -152,8 +151,6 @@ def edit_entry(request, instance_id, debt_id):
         debtor = (person.id in debtors)
         debtee = (person.id == debt.debtee_id)
         pdebtors.append({ 'id': person.id, 'debtor': debtor, 'debtee': debtee, 'name': person.name})
-
-      print repr(debt.date)
 
       context = {
         'instance': instance,
