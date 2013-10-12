@@ -140,7 +140,7 @@ def edit_entry(request, instance_id, debt_id):
       cost = None
       for subdebt in debt.subdebt_set.all():
         debtors[subdebt.debtor_id] = True
-        if subdebt.cost > 0:
+        if subdebt.cost != 0:
           total_cost += subdebt.cost
           if not cost:
             cost = subdebt.cost
