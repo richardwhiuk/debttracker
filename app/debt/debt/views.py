@@ -191,6 +191,62 @@ def add_entry(request, instance_id):
   else:
     return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
 
+def edit_entry_advanced(request, instance_id, debt_id):
+  instance = Instance.objects.get(id=instance_id)
+
+  try:
+    latest = instance.latest_state()
+    debt = latest.debts.get(id=debt_id)
+    try:
+      debtee = latest.people.get(id=request.POST['debtee'])
+      debtors = DotExpandedDict(request.POST)['debtor']
+      date = datetime.strptime(request.POST['date'],"%d/%m/%Y %H:%M:%S %Z")
+      reason = request.POST['reason'].strip()
+
+      # Add the new debt and add the new one
+      nstate = latest.clone("Updating debt: " + str(debt.what))
+
+      ndebt = nstate.debts.create(what=reason,debtee=debtee,date=date)
+
+      for debtor in debtors:
+        if int(float(debtors[debtor])) > 0:
+          dperson = nstate.people.get(id=debtor)
+          cost =  int(float(debtors[debtor]) * 100.0)
+          ndebt.subdebt_set.create(cost=cost,debtor=dperson)
+
+      nstate.debts.remove(debt)
+
+      return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
+
+    except KeyError:
+      # Include retired people, as they may hold existing debt
+      people = latest.people.order_by('name')
+      debtors = {}
+      for subdebt in debt.subdebt_set.all():
+        debtors[subdebt.debtor_id] = subdebt.cost
+
+      pdebtors = []
+      for person in people:
+        cost = 0
+        if person.id in debtors:
+          cost = debtors[person.id]
+        debtee = (person.id == debt.debtee_id)
+        pdebtors.append({ 'id': person.id, 'debt': (cost / 100.0), 'debtee': debtee, 'name': person.name})
+
+      context = {
+        'instance': instance,
+        'entry': debt.id,
+        'date': debt.date.strftime("%d/%m/%Y %H:%M:%S %Z"),
+        'reason': debt.what,
+        'people': pdebtors,
+      }
+
+      return render(request, 'debt/edit_advanced.html', context)
+
+  except Debt.DoesNotExist:
+    return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
+
+
 def add_entry_advanced(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
 

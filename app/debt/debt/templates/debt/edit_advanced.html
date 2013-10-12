@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Entry{% endblock %}
+{% block header %}Edit Entry{% endblock %}
+
+{% block content %}
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<form action="{% url 'edit_entry_advanced' instance.id entry %}" method="post" class="form-horizontal">
+{% csrf_token %}
+<div class="form-group">
+  <label for="debtee" class="col-lg-2 control-label">Person who paid</label>
+  <div class="col-lg-10">
+  <select class="form-control" name="debtee" id="debtee">
+{% for person in people %}
+    <option value="{{ person.id }}" {% if person.debtee %}selected="selected"{% endif %} />{{ person.name }}</option>
+{% endfor %}
+  </select>
+  </div>
+</div>
+<div class="form-group">
+  <label for="reason" class="col-lg-2 control-label">For: (e.g. Pizza)</label>
+  <div class="col-lg-10">
+  <input type="textbox" class="form-control" name="reason" id="reason" value="{{ reason }}">
+  </div>
+</div>
+<div class="form-group">
+  <label for="date" class="col-lg-2 control-label">When:</label>
+  <div class="col-lg-10">
+  <input type="textbox" class="form-control" name="date" id="date" value="{{ date }}">
+  </div>
+</div>
+  <h3>People who owe money</h3>
+<div class="form-group">
+{% for person in people %}
+    <label class="col-lg-2 control-label" for="debtor{{ person.id }}">
+      {{ person.name }} owes (£)
+    <input type="text" class="form-control" name="debtor.{{ person.id }}" id="debtor{{ person.id }}" value="{{ person.debt }}" />
+    </label>
+{% endfor %}
+</div>
+<div class="form-group">
+<input type="submit" class="btn btn-default" value="Update Entry" />
+</div>
+</form>
+{% endblock %}
+
