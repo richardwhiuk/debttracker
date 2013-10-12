@@ -26,6 +26,9 @@
           {{ debtor }}{% if not forloop.last %},{% endif %}
 {% endfor %}
       </td>
+      <td>
+        <a href="{% url 'edit_entry' instance.id entry.id %}" class="btn btn-primary btn-sm">Edit</a>
+      </td>
     </tr>
 {% endfor %}
   </tbody>

@@ -3,6 +3,7 @@ from debt.models import Debt, Person, Instance, State
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from functools import cmp_to_key
+from datetime import datetime
 
 class DotExpandedDict(dict):
     """
@@ -103,6 +104,63 @@ def add_person(request, instance_id):
     return render(request, 'debt/add_person.html', context)
   else:
     return HttpResponseRedirect(reverse('individual', args=(instance.id,)))
+
+def edit_entry(request, instance_id, debt_id):
+  instance = Instance.objects.get(id=instance_id)
+
+  try:
+    latest = instance.latest_state()
+    debt = latest.debts.get(id=debt_id)
+    try:
+      debtee = latest.people.get(id=request.POST['debtee'])
+      debtors_u = request.POST.getlist('debtor')
+      reason = request.POST['reason'].strip()
+      date = datetime.strptime(request.POST['date'],"%d/%m/%Y %H:%M:%S %Z")
+      debtors = latest.people.filter(id__in=debtors_u).filter(retired=False)
+      cost =  int( (float(request.POST['total_cost']) * 100.0 ) / len(debtors))
+      if len(debtors) != len(debtors_u):
+        raise Person.DoesNotExist(str(debtors_u) + ' - ' + str(debtors))
+
+      # Add the new debt and add the new one
+      nstate = latest.clone("Updating debt: " + str(debt.what))
+      ndebt = nstate.debts.create(what=reason,debtee=debtee,date=date)
+
+      for debtor in debtors:
+        ndebt.subdebt_set.create(cost=cost,debtor=debtor)
+
+      nstate.debts.remove(debt)
+
+      return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
+
+    except KeyError:
+      # Include retired people, as they may hold existing debt
+      people = latest.people.order_by('name')
+      debtors = {}
+      cost = 0
+      for subdebt in debt.subdebt_set.all():
+        debtors[subdebt.debtor_id] = True
+        cost += subdebt.cost
+
+      pdebtors = []
+      for person in people:
+        debtor = (person.id in debtors)
+        debtee = (person.id == debt.debtee)
+        pdebtors.append({ 'id': person.id, 'debtor': debtor, 'debtee': debtee, 'name': person.name})
+
+      print repr(debt.date)
+
+      context = {
+        'instance': instance,
+        'entry': debt.id,
+        'date': debt.date.strftime("%d/%m/%Y %H:%M:%S %Z"),
+        'reason': debt.what,
+        'people': pdebtors,
+        'cost': cost / 100.0
+      }
+
+      return render(request, 'debt/edit.html', context)
+  except Debt.DoesNotExist:
+    return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
 
 def add_entry(request, instance_id):
   instance = Instance.objects.get(id=instance_id)

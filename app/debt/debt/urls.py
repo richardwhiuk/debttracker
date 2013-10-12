@@ -19,6 +19,7 @@ urlpatterns = patterns('',
     drl(r'^(?P<instance_id>\d+)/add/advanced/$', 'add_entry_advanced'),
     drl(r'^(?P<instance_id>\d+)/add/person/$', 'add_person'),
     drl(r'^(?P<instance_id>\d+)/delete/state/(?P<state_id>\d+)/$', 'delete_state'),
+    drl(r'^(?P<instance_id>\d+)/debt/(?P<debt_id>\d+)/$', 'edit_entry'),
 
     # Uncomment the admin/doc line below to enable admin documentation:
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
