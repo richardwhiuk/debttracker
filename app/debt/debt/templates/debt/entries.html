@@ -29,6 +29,9 @@
       <td>
         <a href="{% url 'edit_entry' instance.id entry.id %}" class="btn btn-primary btn-sm">Edit</a>
       </td>
+      <td>
+        <a href="{% url 'delete_entry' instance.id entry.id %}" class="btn btn-danger btn-sm">Delete</a>
+      </td>
     </tr>
 {% endfor %}
   </tbody>

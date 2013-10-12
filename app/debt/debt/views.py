@@ -165,6 +165,23 @@ def edit_entry(request, instance_id, debt_id):
   except Debt.DoesNotExist:
     return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
 
+def delete_entry(request, instance_id, debt_id):
+  instance = Instance.objects.get(id=instance_id)
+  latest = instance.latest_state()
+
+  try:
+    debt = latest.debts.get(id=debt_id)
+
+    # Add the new debt and add the new one
+    nstate = latest.clone("Deleting debt: " + str(debt.what))
+
+    nstate.debts.remove(debt)
+
+  except Exception as e:
+    return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
+  else:
+    return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
+
 def add_entry(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
 
