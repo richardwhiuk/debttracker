@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from debt.models import Debt, Person, Instance
+from debt.models import Debt, Person, Instance, State
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from functools import cmp_to_key
@@ -40,8 +40,13 @@ class DotExpandedDict(dict):
 # Emulates the spreadsheet's entries view
 def entries(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
-  state = instance.latest_state()
-  entries = state.debts.order_by('date')
+
+  try:
+    state = instance.latest_state()
+    entries = state.debts.order_by('date')
+  except State.DoesNotExist:
+    entries = []
+
   context = {'entries': entries, 'instance': instance }
   return render(request, 'debt/entries.html', context)
 
@@ -68,19 +73,32 @@ def delete_state(request, instance_id, state_id):
 
 def add_person(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
-  latest = instance.latest_state()
 
   try:
-    try:
-      plusone = latest.people.get(id=int(request.POST['plusone']))
-    except Person.DoesNotExist:
-      plusone = None
+    pop = int(request.POST['plusone'])
     name = request.POST['name'].strip()
-    nstate = latest.clone("Adding new person: " + str(name))
+
+    reason = "Adding new person: " + str(name)
+    nstate = None
+
+    try:
+      latest = instance.latest_state()
+      try:
+        plusone = latest.people.get(id=pop)
+      except Person.DoesNotExist:
+        plusone = None
+      nstate = latest.clone(reason)
+    except State.DoesNotExist:
+      nstate = instance.state_set.create(reason=reason)
+      plusone = None
+
     person = nstate.people.create(name=name,plusone=plusone)
 
   except (KeyError, Person.DoesNotExist):
-    people = instance.latest_state().people.order_by('name')
+    try:
+      people = instance.latest_state().people.order_by('name')
+    except State.DoesNotExist:
+      people = []
     context = {'instance': instance, 'people': people}
     return render(request, 'debt/add_person.html', context)
   else:
@@ -88,9 +106,9 @@ def add_person(request, instance_id):
 
 def add_entry(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
-  latest = instance.latest_state()
 
   try:
+    latest = instance.latest_state()
     debtee = latest.people.get(id=request.POST['debtee'])
     debtors_u = request.POST.getlist('debtor')
     reason = request.POST['reason'].strip()
@@ -110,14 +128,16 @@ def add_entry(request, instance_id):
     people = latest.people.filter(retired=False).order_by('name')
     context = {'instance': instance, 'people': people}
     return render(request, 'debt/add.html', context)
+  except State.DoesNotExist:
+    return HttpResponseRedirect(reverse('add_person', args=(instance.id,)))
   else:
     return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
 
 def add_entry_advanced(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
-  latest = instance.latest_state()
 
   try:
+    latest = instance.latest_state()
     debtee = latest.people.get(id=request.POST['debtee'])
     debtors = DotExpandedDict(request.POST)['debtor']
 
@@ -137,6 +157,8 @@ def add_entry_advanced(request, instance_id):
     people = latest.people.filter(retired=False).order_by('name')
     context = {'instance': instance, 'people': people}
     return render(request, 'debt/add_advanced.html', context)
+  except State.DoesNotExist:
+    return HttpResponseRedirect(reverse('add_person', args=(instance.id,)))
   else:
     return HttpResponseRedirect(reverse('entries', args=(instance.id,)))
 
@@ -267,44 +289,46 @@ def balances(request, instance_id, mode):
 
   people = {}
   data = {}
+  max_depth = 0
 
   instance = Instance.objects.get(id=instance_id)
 
-  state = instance.latest_state()
+  try:
+    state = instance.latest_state()
 
-  # Add all the people
+    # Add all the people
 
-  for person in state.people.all():
-    summary = Summary(person.id,person.name,person.plusone_id)
-    if (not person.retired) and (person.plusone == None or mode != 'summary'):
-      data[person.id] = summary
-    people[person.id] = summary
+    for person in state.people.all():
+      summary = Summary(person.id,person.name,person.plusone_id)
+      if (not person.retired) and (person.plusone == None or mode != 'summary'):
+        data[person.id] = summary
+      people[person.id] = summary
 
-  for person in people:
-    if people[person].plusone and people[person].plusone in data:
-      people[people[person].plusone].add_sub(people[person])
-      people[person].add_parent(data[people[person].plusone])
+    for person in people:
+      if people[person].plusone and people[person].plusone in data:
+        people[people[person].plusone].add_sub(people[person])
+        people[person].add_parent(data[people[person].plusone])
 
-  max_depth = 0
+    for person in people:
+      i = people[person].depth()
+      if i > max_depth:
+        max_depth = i
 
-  for person in people:
-    i = people[person].depth()
-    if i > max_depth:
-      max_depth = i
+    # Add all the debts
 
-  # Add all the debts
+    for debt in state.debts.all():
+      total = 0
+      for subdebt in debt.subdebt_set.all():
+         people[subdebt.debtor.id].add_debt(subdebt.cost, mode)
+         total += subdebt.cost
+      people[debt.debtee.id].add_asset(total, mode)
 
-  for debt in state.debts.all():
-    total = 0
-    for subdebt in debt.subdebt_set.all():
-       people[subdebt.debtor.id].add_debt(subdebt.cost, mode)
-       total += subdebt.cost
-    people[debt.debtee.id].add_asset(total, mode)
-
-  if mode == 'detailed':
-    sort = sorted(data.values(), key=cmp_to_key(detail_sort))
-  else:
-    sort = sorted(data.values(), key=lambda summary: summary.balance())
+    if mode == 'detailed':
+      sort = sorted(data.values(), key=cmp_to_key(detail_sort))
+    else:
+      sort = sorted(data.values(), key=lambda summary: summary.balance())
+  except State.DoesNotExist:
+    sort = []
 
   context = {'data': sort, 'instance': instance, 'title': mode.title(), 'mode': mode, 'max_indent': max_depth}
 
