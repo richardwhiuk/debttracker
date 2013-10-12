@@ -286,6 +286,10 @@ def find_top_plusone(f, people, cache):
   cache[f] = k
   return k
 
+def date(request, instance_id, year, month, day):
+  date = datetime(int(year), int(month), int(day) + 1)
+  return balances(request, instance_id, 'summary', date=date)
+
 def summary(request, instance_id):
   return balances(request, instance_id, 'summary')
 
@@ -342,7 +346,7 @@ def detail_sort(x,y):
   # print 'DS: ' + x.name + ' with: ' + y.name + ' => ' + reason + ' ' + str(ret)
   return ret
 
-def balances(request, instance_id, mode):
+def balances(request, instance_id, mode, date=None):
   cache = {}
 
   people = {}
@@ -374,7 +378,12 @@ def balances(request, instance_id, mode):
 
     # Add all the debts
 
-    for debt in state.debts.all():
+    if date:
+      debts = state.debts.filter(date__lt=date)
+    else:
+      debts = state.debts.all()
+
+    for debt in debts:
       total = 0
       for subdebt in debt.subdebt_set.all():
          people[subdebt.debtor.id].add_debt(subdebt.cost, mode)

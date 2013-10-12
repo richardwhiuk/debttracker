@@ -10,6 +10,7 @@ def drl(regex, name):
 urlpatterns = patterns('',
     # Examples:
     #url(r'^$', 'debt.views.home', name='home'),
+    drl(r'^(?P<instance_id>\d+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/$', 'date'),
     drl(r'^(?P<instance_id>\d+)/summary/$', 'summary'),
     drl(r'^(?P<instance_id>\d+)/detailed/$', 'detailed'),
     drl(r'^(?P<instance_id>\d+)/individual/$', 'individual'),
