@@ -4,18 +4,21 @@ from django.conf.urls import patterns, include, url
 from django.contrib import admin
 admin.autodiscover()
 
+def drl(regex, name):
+  return url(regex, 'debt.views.' + name, name=name)
+
 urlpatterns = patterns('',
     # Examples:
     #url(r'^$', 'debt.views.home', name='home'),
-    url(r'^(?P<instance_id>\d+)/summary/$', 'debt.views.summary', name='summary'),
-    url(r'^(?P<instance_id>\d+)/detailed/$', 'debt.views.detailed', name='detailed'),
-    url(r'^(?P<instance_id>\d+)/individual/$', 'debt.views.individual', name='individual'),
-    url(r'^(?P<instance_id>\d+)/changes/$', 'debt.views.changes', name='changes'),
-    url(r'^(?P<instance_id>\d+)/entries/$', 'debt.views.entries', name='entries'),
-    url(r'^(?P<instance_id>\d+)/add/$', 'debt.views.add_entry', name='add_entry'),
-    url(r'^(?P<instance_id>\d+)/add/advanced/$', 'debt.views.add_entry_advanced', name='add_entry_advanced'),
-    url(r'^(?P<instance_id>\d+)/add/person/$', 'debt.views.add_person', name='add_person'),
-    url(r'^(?P<instance_id>\d+)/delete/state/(?P<state_id>\d+)/$', 'debt.views.delete_state', name='delete_state'),
+    drl(r'^(?P<instance_id>\d+)/summary/$', 'summary'),
+    drl(r'^(?P<instance_id>\d+)/detailed/$', 'detailed'),
+    drl(r'^(?P<instance_id>\d+)/individual/$', 'individual'),
+    drl(r'^(?P<instance_id>\d+)/changes/$', 'changes'),
+    drl(r'^(?P<instance_id>\d+)/entries/$', 'entries'),
+    drl(r'^(?P<instance_id>\d+)/add/$', 'add_entry'),
+    drl(r'^(?P<instance_id>\d+)/add/advanced/$', 'add_entry_advanced'),
+    drl(r'^(?P<instance_id>\d+)/add/person/$', 'add_person'),
+    drl(r'^(?P<instance_id>\d+)/delete/state/(?P<state_id>\d+)/$', 'delete_state'),
 
     # Uncomment the admin/doc line below to enable admin documentation:
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
