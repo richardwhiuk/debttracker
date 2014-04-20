@@ -44,7 +44,7 @@ def entries(request, instance_id):
 
   try:
     state = instance.latest_state()
-    entries = state.debts.order_by('date')
+    entries = state.debts.order_by('-date')
   except State.DoesNotExist:
     entries = []
 
