@@ -282,9 +282,9 @@ def add_entry_advanced(request, instance_id):
     debt = nstate.debts.create(what=reason,debtee=debtee)
 
     for debtor in debtors:
-      if int(debtors[debtor]) > 0:
+      if int(float(debtors[debtor]) * 100.0) > 0:
         dperson = latest.people.get(id=debtor)
-        cost =  int(float(debtors[debtor]) * 100.0)
+        cost = int(float(debtors[debtor]) * 100.0)
         debt.subdebt_set.create(cost=cost,debtor=dperson)
 
   except (KeyError, Person.DoesNotExist):
