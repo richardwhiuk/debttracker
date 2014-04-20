@@ -443,9 +443,9 @@ def balances(request, instance_id, mode, date=None):
       people[person.id] = summary
 
     for person in people:
-      if people[person].plusone and people[person].plusone in data:
+      if people[person].plusone and people[person].plusone in people:
         people[people[person].plusone].add_sub(people[person])
-        people[person].add_parent(data[people[person].plusone])
+        people[person].add_parent(people[people[person].plusone])
 
     for person in people:
       i = people[person].depth()
