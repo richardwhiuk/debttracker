@@ -117,6 +117,102 @@ def add_person(request, instance_id):
   else:
     return HttpResponseRedirect(reverse('individual', args=(instance.id,)))
 
+def get_restricted(ids, people):
+
+  if len(ids) == 0:
+    return ids
+
+  else:
+    additional = people.filter(plusone__in=ids)
+    return ids + get_restricted([person.id for person in additional], people)
+
+def debtor(person, debt):
+  for subdebt in debt.subdebt_set.all():
+    if subdebt.debtor == person:
+      return True
+  return False
+
+def edit_person(request, instance_id, person_id):
+  instance = Instance.objects.get(id=instance_id)
+
+  try:
+    latest = instance.latest_state()
+    person = latest.people.get(id=person_id)
+    restricted = get_restricted([person.id], latest.people)
+    candidates = latest.people.exclude(id__in=restricted)
+
+    try:
+      name = request.POST['name']
+      plusone = int(request.POST['plusone'])
+      retired = False
+
+      print request.POST
+
+      try:
+        if request.POST['retired'] != '':
+          retired = True
+      except KeyError:
+        pass
+
+      try:
+        plusone = candidates.get(id=request.POST['plusone'])
+      except Person.DoesNotExist:
+        plusone = None
+
+      reason = "Updating: " + str(name)
+      nstate = latest.clone(reason)
+      nperson = nstate.people.create(name=name,email=request.POST['email'],plusone=plusone,retired=retired)
+      nstate.people.remove(person)
+
+      # Update all of the person's debts in the new state to reference the new Person object
+
+      for debt in latest.debts.all():
+
+        print 'Checking: ' + str(debt) + ' for: ' + str(person)
+
+        if debt.debtee == person or debtor(person, debt):
+          if debt.debtee == person:
+            print 'Updating person used for debtee'
+
+            ndebt = nstate.debts.create(what=debt.what,debtee=nperson,date=debt.date)
+          else:
+            ndebt = nstate.debts.create(what=debt.what,debtee=debt.debtee,date=debt.date)
+          for subdebt in debt.subdebt_set.all():
+            if subdebt.debtor == person:
+              print 'Updating person used for debtor'
+
+              ndebt.subdebt_set.create(cost=subdebt.cost,debtor=nperson)
+            else:
+              ndebt.subdebt_set.create(cost=subdebt.cost,debtor=subdebt.debtor)
+          nstate.debts.remove(debt)
+
+    except KeyError as e:
+
+      print e
+
+      plusones = [{ 'id': 0, 'name': 'None', 'current': person.plusone == None }]
+
+      for candidate in candidates:
+        plusone = { 'id': candidate.id, 'name': candidate.name, 'current': person.plusone_id == candidate.id }
+        plusones.append(plusone)
+
+      context = {
+        'instance': instance,
+        'id': person.id,
+        'name': person.name,
+        'email': person.email,
+        'plusones': plusones,
+        'retired': person.retired
+      }
+
+      return render(request, 'debt/edit_person.html', context)
+  except Person.DoesNotExist:
+    pass
+  except State.DoesNotExist:
+    pass
+
+  return HttpResponseRedirect(reverse('people', args=(instance.id,)))
+
 def edit_entry(request, instance_id, debt_id):
   instance = Instance.objects.get(id=instance_id)
 

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Person{% endblock %}
+{% block header %}Edit Person{% endblock %}
+
+{% block content %}
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+<form action="{% url 'edit_person' instance.id id %}" method="post" class="form-horizontal">
+{% csrf_token %}
+<div class="form-group">
+  <label for="name" class="col-lg-2 control-label">Name:</label>
+  <div class="col-lg-10">
+  <input class="form-control" name="name" id="name" value="{{ name }}" />
+  </div>
+</div>
+<div class="form-group">
+  <label for="name" class="col-lg-2 control-label">Email:</label>
+  <div class="col-lg-10">
+  <input class="form-control" name="email" id="email" value="{{ email }}" />
+  </div>
+</div>
+<div class="form-group">
+  <label for="plusone" class="col-lg-2 control-label">Parent</label>
+  <div class="col-lg-10">
+  <select class="form-control" name="plusone" id="plusone">
+{% for person in plusones %}
+    <option value="{{ person.id }}" {% if person.current %} selected="selected" {% endif %} />{{ person.name }}</option>
+{% endfor %}
+  </select>
+  </div>
+</div>
+<div class="form-group">
+  <label for="name" class="col-lg-2 control-label">Retired:</label>
+  <div class="col-lg-10">
+  <input class="form-control" name="retired" id="retired" type="checkbox" {% if retired %} checked="checked" {% endif %} />
+  </div>
+</div>
+<div class="form-group">
+<input type="submit" class="btn btn-default" value="Update {{ name }}" />
+</div>
+</form>
+{% endblock %}
+
