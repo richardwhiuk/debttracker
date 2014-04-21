@@ -92,7 +92,7 @@ def add_person(request, instance_id):
       nstate = instance.state_set.create(reason=reason)
       plusone = None
 
-    person = nstate.people.create(name=name,plusone=plusone)
+    person = nstate.people.create(name=name,plusone=plusone,email=request.POST['email'])
 
   except (KeyError, Person.DoesNotExist):
     try:

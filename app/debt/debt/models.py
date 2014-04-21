@@ -25,6 +25,9 @@ class Person(models.Model):
   # Name of the person
   name = models.CharField(max_length=200)
 
+  # Email of the person
+  email = models.CharField(max_length=200)
+
   # Plus one of this person
   plusone = models.ForeignKey('self', blank=True, null=True)
 
