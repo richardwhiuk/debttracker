@@ -38,6 +38,19 @@ class DotExpandedDict(dict):
             except TypeError: # Special-case if current isn't a dict.
                 current = {bits[-1]: v}
 
+def people(request, instance_id):
+  instance = Instance.objects.get(id=instance_id)
+
+  try:
+    latest = instance.latest_state()
+    people = latest.people.order_by('name')
+  except State.DoesNotExist:
+    people = []
+
+  context = {'people': people, 'instance': instance }
+  return render(request, 'debt/people.html', context)
+
+
 # Emulates the spreadsheet's entries view
 def entries(request, instance_id):
   instance = Instance.objects.get(id=instance_id)
